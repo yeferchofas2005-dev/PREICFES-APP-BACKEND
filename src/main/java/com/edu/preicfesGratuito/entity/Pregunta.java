@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Pregunta evaluativa perteneciente a un banco y a una competencia.
+ */
 @Entity
 @Table(name = "pregunta")
 @Getter

@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Competencia evaluada por una pregunta.
+ */
 @Entity
 @Table(name = "competencia")
 @Getter

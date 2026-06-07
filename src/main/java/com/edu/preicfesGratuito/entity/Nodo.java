@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Nodo o sede operativa asociada a una localidad.
+ */
 @Entity
 @Table(name = "nodo")
 @Getter

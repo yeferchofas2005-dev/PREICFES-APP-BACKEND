@@ -4,6 +4,9 @@ import com.edu.preicfesGratuito.entity.OpcionRespuesta;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Repositorio de opciones de respuesta disponibles para cada pregunta.
+ */
 @Repository
 public interface OpcionRespuestaRepository extends JpaRepository<OpcionRespuesta, Long> {
 }

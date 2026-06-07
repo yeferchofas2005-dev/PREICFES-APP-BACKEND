@@ -3,6 +3,12 @@ package com.edu.preicfesGratuito.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Entidad de rol del sistema.
+ *
+ * <p>Mapea la tabla {@code rol} y contiene valores como ADMIN, DIRECTIVO,
+ * PROFESOR y ESTUDIANTE.</p>
+ */
 @Entity
 @Table(name = "rol")
 @Getter

@@ -5,6 +5,11 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Intento realizado por un estudiante sobre un simulacro.
+ *
+ * <p>Guarda los resultados finales usados por resumenes y estadisticas.</p>
+ */
 @Entity
 @Table(name = "intento_simulacro")
 @Getter

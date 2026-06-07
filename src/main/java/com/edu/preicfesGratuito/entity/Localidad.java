@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Localidad geografica donde opera un nodo educativo.
+ */
 @Entity
 @Table(name = "localidad")
 @Getter

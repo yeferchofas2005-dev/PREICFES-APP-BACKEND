@@ -7,6 +7,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * Entidad que representa un usuario de la plataforma.
+ *
+ * <p>Mapea la tabla {@code usuario}. El rol define los permisos funcionales
+ * y {@code passwordHash} almacena la contrasena cifrada.</p>
+ */
 @Entity
 @Table(name = "usuario")
 @Getter

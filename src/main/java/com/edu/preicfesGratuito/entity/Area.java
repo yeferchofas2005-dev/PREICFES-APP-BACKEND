@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Area evaluada en el simulacro, equivalente a una asignatura ICFES.
+ */
 @Entity
 @Table(name = "area")
 @Getter

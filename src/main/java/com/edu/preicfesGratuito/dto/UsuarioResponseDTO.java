@@ -2,6 +2,11 @@ package com.edu.preicfesGratuito.dto;
 
 import lombok.*;
 
+/**
+ * Representacion publica de un usuario.
+ *
+ * <p>No expone el hash de contrasena ni otros datos sensibles.</p>
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -5,6 +5,13 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * Grupo academico de estudiantes dirigido por un profesor.
+ *
+ * <p>Mapea la tabla {@code grupo}. Cada grupo pertenece a un nodo operativo
+ * y tiene un profesor responsable. Los simulacros se asignan al grupo mediante
+ * la tabla {@code simulacro_grupo}.</p>
+ */
 @Entity
 @Table(name = "grupo")
 @Getter

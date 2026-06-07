@@ -5,6 +5,13 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * Simulacro asignable a grupos de estudiantes.
+ *
+ * <p>Mapea la tabla {@code simulacro}. Se compone de bancos de preguntas
+ * y pertenece a un periodo academico. El tiempo limite define la duracion
+ * maxima permitida para resolverlo.</p>
+ */
 @Entity
 @Table(name = "simulacro")
 @Getter

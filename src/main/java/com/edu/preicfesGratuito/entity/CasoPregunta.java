@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Caso base que agrupa preguntas con un texto o imagen comun.
+ */
 @Entity
 @Table(name = "caso_pregunta")
 @Getter

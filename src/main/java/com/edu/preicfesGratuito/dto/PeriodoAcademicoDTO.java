@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.dto;
 import lombok.*;
 import java.time.LocalDate;
 
+/**
+ * Representacion de un periodo academico.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

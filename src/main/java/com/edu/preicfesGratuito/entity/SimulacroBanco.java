@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Relacion muchos a muchos entre simulacros y bancos de preguntas.
+ */
 @Entity
 @Table(name = "simulacro_banco")
 @IdClass(SimulacroBancoId.class)

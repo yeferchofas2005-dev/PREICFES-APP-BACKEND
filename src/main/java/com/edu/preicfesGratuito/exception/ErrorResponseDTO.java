@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+/**
+ * Estructura estandar de error devuelta por la API.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

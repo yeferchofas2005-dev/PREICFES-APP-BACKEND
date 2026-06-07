@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 
+/**
+ * Periodo academico en el que se organizan bancos de preguntas y simulacros.
+ */
 @Entity
 @Table(name = "periodo_academico")
 @Getter

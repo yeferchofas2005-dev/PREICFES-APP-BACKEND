@@ -6,9 +6,21 @@ import com.edu.preicfesGratuito.entity.Rol;
 import com.edu.preicfesGratuito.entity.Usuario;
 import org.springframework.stereotype.Component;
 
+/**
+ * Mapper manual para exponer datos publicos de usuario.
+ *
+ * <p>Evita devolver entidades JPA directamente y omite campos sensibles como
+ * el hash de la contrasena.</p>
+ */
 @Component
 public class UsuarioMapper {
 
+    /**
+     * Convierte una entidad {@link Usuario} a su DTO de respuesta.
+     *
+     * @param usuario entidad persistida
+     * @return DTO seguro para exponer por API
+     */
     public UsuarioResponseDTO toResponseDTO(Usuario usuario) {
         if (usuario == null) {
             return null;
@@ -26,6 +38,9 @@ public class UsuarioMapper {
                 .build();
     }
 
+    /**
+     * Convierte el rol asociado al usuario a un DTO simple.
+     */
     private RolDTO toRolDTO(Rol rol) {
         if (rol == null) {
             return null;

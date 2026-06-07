@@ -2,6 +2,9 @@ package com.edu.preicfesGratuito.dto;
 
 import lombok.*;
 
+/**
+ * Representacion simple de un rol del sistema.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

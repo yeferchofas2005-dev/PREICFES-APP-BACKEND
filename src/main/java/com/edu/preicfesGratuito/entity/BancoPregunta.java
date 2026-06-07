@@ -5,6 +5,9 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
+/**
+ * Banco de preguntas asociado a un periodo academico y un area.
+ */
 @Entity
 @Table(name = "banco_preguntas")
 @Getter

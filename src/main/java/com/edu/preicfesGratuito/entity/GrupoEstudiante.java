@@ -4,6 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 
+/**
+ * Relacion entre un estudiante y su grupo academico.
+ *
+ * <p>La tabla usa {@code id_estudiante} como llave primaria para garantizar
+ * que un estudiante pertenezca a un solo grupo.</p>
+ */
 @Entity
 @Table(name = "grupo_estudiante")
 @Getter

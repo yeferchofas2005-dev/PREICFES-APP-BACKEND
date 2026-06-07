@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.entity;
 import java.io.Serializable;
 import lombok.*;
 
+/**
+ * Llave compuesta para la relacion {@link SimulacroBanco}.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -18,6 +18,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Configuracion central de Spring Security.
+ *
+ * <p>Define una API sin estado basada en JWT, expone los endpoints publicos
+ * de autenticacion y restringe los prefijos funcionales segun el rol del
+ * usuario autenticado.</p>
+ */
 @Configuration
 @EnableMethodSecurity
 @RequiredArgsConstructor
@@ -27,6 +34,17 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final UserDetailsServiceImpl userDetailsService;
 
+    /**
+     * Construye la cadena de filtros HTTP de seguridad.
+     *
+     * <p>Desactiva CSRF porque la API no usa sesiones de navegador, configura
+     * sesiones stateless, registra el manejador de errores 401 y ubica el filtro
+     * JWT antes del filtro de autenticacion por usuario y contrasena.</p>
+     *
+     * @param http builder de seguridad HTTP proporcionado por Spring
+     * @return cadena de filtros lista para proteger la API
+     * @throws Exception si Spring Security no puede construir la configuracion
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         return http
@@ -46,6 +64,11 @@ public class SecurityConfig {
                 .build();
     }
 
+    /**
+     * Proveedor de autenticacion que valida credenciales contra la base de datos.
+     *
+     * @return proveedor DAO con {@link PasswordEncoder} BCrypt
+     */
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
@@ -53,11 +76,23 @@ public class SecurityConfig {
         return authProvider;
     }
 
+    /**
+     * Expone el {@link AuthenticationManager} usado por el servicio de login.
+     *
+     * @param configuration configuracion de autenticacion de Spring
+     * @return administrador de autenticacion de la aplicacion
+     * @throws Exception si no se puede resolver el manager
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
+    /**
+     * Codificador de contrasenas para persistir y verificar hashes seguros.
+     *
+     * @return instancia BCrypt usada en registro y login
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Opcion de respuesta asociada a una pregunta.
+ */
 @Entity
 @Table(name = "opcion_respuesta")
 @Getter

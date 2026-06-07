@@ -3,6 +3,9 @@ package com.edu.preicfesGratuito.dto;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
+/**
+ * Datos de entrada para registrar o crear usuarios.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

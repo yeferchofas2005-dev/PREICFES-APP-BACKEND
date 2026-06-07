@@ -23,6 +23,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Implementacion del flujo de autenticacion.
+ *
+ * <p>Centraliza la validacion de credenciales, el cifrado de contrasenas,
+ * la creacion de usuarios y la emision de tokens JWT.</p>
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
@@ -34,6 +40,12 @@ public class AuthServiceImpl implements AuthService {
     private final RolRepository rolRepository;
     private final UsuarioMapper usuarioMapper;
 
+    /**
+     * Autentica al usuario usando Spring Security y retorna un JWT si las credenciales son validas.
+     *
+     * @param request correo y contrasena recibidos desde el cliente
+     * @return respuesta de autenticacion con token y datos del usuario
+     */
     @Override
     @Transactional(readOnly = true)
     public AuthResponseDTO login(LoginRequestDTO request) {
@@ -52,6 +64,15 @@ public class AuthServiceImpl implements AuthService {
         return buildAuthResponse(userDetails, usuario);
     }
 
+    /**
+     * Registra un usuario nuevo validando unicidad de documento y correo.
+     *
+     * <p>La contrasena nunca se persiste en texto plano; se almacena como hash BCrypt
+     * en la columna {@code password_hash}.</p>
+     *
+     * @param request datos enviados para crear el usuario
+     * @return respuesta de autenticacion con token y usuario creado
+     */
     @Override
     @Transactional
     public AuthResponseDTO register(UsuarioRequestDTO request) {
@@ -83,6 +104,13 @@ public class AuthServiceImpl implements AuthService {
         return buildAuthResponse(userDetails, usuarioGuardado);
     }
 
+    /**
+     * Construye la respuesta comun de login y registro.
+     *
+     * @param userDetails principal autenticable usado para firmar el token
+     * @param usuario entidad del usuario que se expondra como DTO
+     * @return respuesta con token Bearer y datos publicos del usuario
+     */
     private AuthResponseDTO buildAuthResponse(UserDetailsImpl userDetails, Usuario usuario) {
         return AuthResponseDTO.builder()
                 .token(jwtUtil.generateToken(userDetails))

@@ -13,9 +13,18 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Manejador global de excepciones de la API REST.
+ *
+ * <p>Convierte excepciones tecnicas o de negocio en respuestas JSON
+ * consistentes para los clientes.</p>
+ */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /**
+     * Procesa errores de validacion de DTOs anotados con Bean Validation.
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponseDTO> handleValidationException(
             MethodArgumentNotValidException exception,
@@ -34,6 +43,9 @@ public class GlobalExceptionHandler {
         );
     }
 
+    /**
+     * Procesa errores de reglas de negocio asociadas a solicitudes invalidas.
+     */
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ErrorResponseDTO> handleBadRequest(
             BadRequestException exception,
@@ -42,6 +54,9 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Solicitud inválida", exception.getMessage(), request.getRequestURI(), null);
     }
 
+    /**
+     * Procesa errores cuando un recurso solicitado no existe.
+     */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponseDTO> handleResourceNotFound(
             ResourceNotFoundException exception,
@@ -50,6 +65,9 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, "Recurso no encontrado", exception.getMessage(), request.getRequestURI(), null);
     }
 
+    /**
+     * Procesa errores de credenciales invalidas o usuarios inactivos.
+     */
     @ExceptionHandler({BadCredentialsException.class, DisabledException.class})
     public ResponseEntity<ErrorResponseDTO> handleAuthenticationException(
             RuntimeException exception,
@@ -58,6 +76,9 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.UNAUTHORIZED, "No autorizado", exception.getMessage(), request.getRequestURI(), null);
     }
 
+    /**
+     * Construye la estructura estandar de error.
+     */
     private ResponseEntity<ErrorResponseDTO> buildResponse(
             HttpStatus status,
             String error,

@@ -11,8 +11,8 @@
 	<groupId>com.edu.preicfesGratuitoBackend</groupId>
 	<artifactId>PreicfesGratuitoBackend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
+	<name>PreICFES Gratuito Backend</name>
+	<description>API REST de simulacros tipo ICFES para la plataforma PreICFES Gratuito</description>
 	<url/>
 	<licenses>
 		<license/>

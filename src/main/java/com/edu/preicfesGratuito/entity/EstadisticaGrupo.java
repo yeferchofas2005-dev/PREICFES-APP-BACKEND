@@ -5,6 +5,9 @@ import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Tabla de apoyo con estadisticas consolidadas por grupo.
+ */
 @Entity
 @Table(name = "estadistica_grupo")
 @Getter

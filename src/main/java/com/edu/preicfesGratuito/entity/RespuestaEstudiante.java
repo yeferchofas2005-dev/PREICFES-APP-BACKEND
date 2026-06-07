@@ -3,6 +3,12 @@ package com.edu.preicfesGratuito.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Respuesta seleccionada por un estudiante para una pregunta en un intento.
+ *
+ * <p>La base de datos calcula {@code es_correcta} mediante trigger al insertar
+ * la respuesta.</p>
+ */
 @Entity
 @Table(
     name = "respuesta_estudiante",

@@ -66,6 +66,28 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Procesa validaciones de estado de simulacros (ej. ya finalizado, no iniciado)
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponseDTO> handleIllegalStateException(
+            IllegalStateException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.CONFLICT, "Conflicto de estado", exception.getMessage(), request.getRequestURI(), null);
+    }
+
+    /**
+     * Procesa errores de argumentos como códigos de acceso incorrectos
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponseDTO> handleIllegalArgumentException(
+            IllegalArgumentException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.BAD_REQUEST, "Datos incorrectos", exception.getMessage(), request.getRequestURI(), null);
+    }
+
+    /**
      * Procesa errores de credenciales invalidas o usuarios inactivos.
      */
     @ExceptionHandler({BadCredentialsException.class, DisabledException.class})

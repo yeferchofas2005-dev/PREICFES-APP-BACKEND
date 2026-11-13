@@ -3,10 +3,12 @@ package com.edu.preicfesGratuito.repository;
 import com.edu.preicfesGratuito.entity.IntentoSimulacro;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.query.Procedure;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repositorio de intentos de simulacro.
@@ -16,6 +18,11 @@ import java.util.List;
  */
 @Repository
 public interface IntentoSimulacroRepository extends JpaRepository<IntentoSimulacro, Long> {
+
+    Optional<IntentoSimulacro> findByEstudianteIdUsuarioAndSimulacroIdSimulacro(Long idEstudiante, Long idSimulacro);
+
+    @Procedure(procedureName = "sp_finalizar_intento")
+    void spFinalizarIntento(@Param("p_id_intento") Long pIdIntento);
 
     /**
      * Calcula el resumen de intentos finalizados de un estudiante.

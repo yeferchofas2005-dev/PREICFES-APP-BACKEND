@@ -25,6 +25,9 @@ public class SimulacroGrupo {
     @Column(name = "id_grupo")
     private Long idGrupo;
 
+    @Column(name = "codigo_acceso", nullable = false, length = 5)
+    private String codigoAcceso;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_simulacro", insertable = false, updatable = false)
     private Simulacro simulacro;

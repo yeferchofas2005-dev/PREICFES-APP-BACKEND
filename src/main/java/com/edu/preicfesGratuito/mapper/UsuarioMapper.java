@@ -1,7 +1,9 @@
 package com.edu.preicfesGratuito.mapper;
 
+import com.edu.preicfesGratuito.dto.NodoSimpleDTO;
 import com.edu.preicfesGratuito.dto.RolDTO;
 import com.edu.preicfesGratuito.dto.UsuarioResponseDTO;
+import com.edu.preicfesGratuito.entity.Nodo;
 import com.edu.preicfesGratuito.entity.Rol;
 import com.edu.preicfesGratuito.entity.Usuario;
 import org.springframework.stereotype.Component;
@@ -35,13 +37,14 @@ public class UsuarioMapper {
                 .telefono(usuario.getTelefono())
                 .activo(usuario.getActivo())
                 .rol(toRolDTO(usuario.getRol()))
+                .nodo(toNodoSimpleDTO(usuario.getNodo()))
                 .build();
     }
 
     /**
      * Convierte el rol asociado al usuario a un DTO simple.
      */
-    private RolDTO toRolDTO(Rol rol) {
+    public RolDTO toRolDTO(Rol rol) {
         if (rol == null) {
             return null;
         }
@@ -49,6 +52,21 @@ public class UsuarioMapper {
         return RolDTO.builder()
                 .idRol(rol.getIdRol())
                 .nombre(rol.getNombre())
+                .build();
+    }
+
+    /**
+     * Convierte el nodo asociado a un DTO resumido.
+     */
+    public NodoSimpleDTO toNodoSimpleDTO(Nodo nodo) {
+        if (nodo == null) {
+            return null;
+        }
+
+        return NodoSimpleDTO.builder()
+                .idNodo(nodo.getIdNodo())
+                .nombre(nodo.getNombre())
+                .localidad(nodo.getLocalidad() != null ? nodo.getLocalidad().getNombre() : null)
                 .build();
     }
 }

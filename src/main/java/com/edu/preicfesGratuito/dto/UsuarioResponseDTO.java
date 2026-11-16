@@ -20,4 +20,5 @@ public class UsuarioResponseDTO {
     private String telefono;
     private Boolean activo;
     private RolDTO rol;
+    private NodoSimpleDTO nodo;
 }

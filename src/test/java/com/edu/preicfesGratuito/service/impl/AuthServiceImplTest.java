@@ -20,12 +20,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.Optional;
 
@@ -55,13 +57,16 @@ class AuthServiceImplTest {
 
     private Usuario usuarioActivo;
     private UsuarioResponseDTO usuarioResponseDTO;
+    private Rol rolEstudiante;
 
     @BeforeEach
     void setUp() {
-        Rol rol = Rol.builder().idRol(1L).nombre("ADMIN").build();
+        Rol rolAdmin = Rol.builder().idRol(1L).nombre("ADMIN").build();
+        rolEstudiante = Rol.builder().idRol(4L).nombre("ESTUDIANTE").build();
+
         usuarioActivo = Usuario.builder()
                 .idUsuario(1L)
-                .rol(rol)
+                .rol(rolAdmin)
                 .nombres("Administrador")
                 .apellidos("Sistema")
                 .documento("100000001")
@@ -126,32 +131,79 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void register_cuandoDatosValidos_creaUsuarioYRetornaToken() {
+    void register_cuandoAutorregistroDeshabilitado_lanzaAccessDeniedException() {
+        ReflectionTestUtils.setField(authService, "selfRegisterEnabled", false);
+        UsuarioRequestDTO request = UsuarioRequestDTO.builder()
+                .documento("99999999")
+                .correo("nuevo@preicfes.com")
+                .idRol(4L)
+                .build();
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(AccessDeniedException.class);
+        verifyNoInteractions(usuarioRepository);
+    }
+
+    @Test
+    void register_cuandoAutorregistroHabilitadoYRolEstudiante_creaUsuario() {
+        ReflectionTestUtils.setField(authService, "selfRegisterEnabled", true);
         UsuarioRequestDTO request = UsuarioRequestDTO.builder()
                 .nombres("Nuevo")
-                .apellidos("Usuario")
+                .apellidos("Estudiante")
                 .documento("99999999")
                 .correo("nuevo@preicfes.com")
                 .password("123456")
-                .idRol(1L)
+                .idRol(4L)
+                .build();
+
+        Usuario estudianteGuardado = Usuario.builder()
+                .idUsuario(10L)
+                .rol(rolEstudiante)
+                .correo("nuevo@preicfes.com")
+                .passwordHash("$2a$10$encoded")
+                .activo(true)
+                .build();
+        UsuarioResponseDTO estudianteDTO = UsuarioResponseDTO.builder()
+                .idUsuario(10L)
+                .correo("nuevo@preicfes.com")
+                .rol(RolDTO.builder().idRol(4L).nombre("ESTUDIANTE").build())
                 .build();
 
         when(usuarioRepository.existsByDocumento("99999999")).thenReturn(false);
         when(usuarioRepository.existsByCorreo("nuevo@preicfes.com")).thenReturn(false);
-        when(rolRepository.findById(1L)).thenReturn(Optional.of(usuarioActivo.getRol()));
+        when(rolRepository.findByNombre("ESTUDIANTE")).thenReturn(Optional.of(rolEstudiante));
         when(passwordEncoder.encode("123456")).thenReturn("$2a$10$encoded");
-        when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuarioActivo);
+        when(usuarioRepository.save(any(Usuario.class))).thenReturn(estudianteGuardado);
         when(jwtUtil.generateToken(any(UserDetailsImpl.class))).thenReturn("jwt-nuevo");
-        when(usuarioMapper.toResponseDTO(usuarioActivo)).thenReturn(usuarioResponseDTO);
+        when(usuarioMapper.toResponseDTO(estudianteGuardado)).thenReturn(estudianteDTO);
 
         AuthResponseDTO response = authService.register(request);
 
         assertThat(response.getToken()).isEqualTo("jwt-nuevo");
-        verify(usuarioRepository).save(any(Usuario.class));
+        assertThat(response.getUsuario().getRol().getNombre()).isEqualTo("ESTUDIANTE");
+    }
+
+    @Test
+    void register_cuandoAutorregistroHabilitadoEIntentaRolPrivilegiado_lanzaAccessDeniedException() {
+        ReflectionTestUtils.setField(authService, "selfRegisterEnabled", true);
+        UsuarioRequestDTO request = UsuarioRequestDTO.builder()
+                .documento("99999999")
+                .correo("atacante@preicfes.com")
+                .idRol(1L)
+                .build();
+
+        when(usuarioRepository.existsByDocumento("99999999")).thenReturn(false);
+        when(usuarioRepository.existsByCorreo("atacante@preicfes.com")).thenReturn(false);
+        when(rolRepository.findByNombre("ESTUDIANTE")).thenReturn(Optional.of(rolEstudiante));
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("ESTUDIANTE");
     }
 
     @Test
     void register_cuandoCorreoDuplicado_lanzaBadRequestException() {
+        ReflectionTestUtils.setField(authService, "selfRegisterEnabled", true);
         UsuarioRequestDTO request = UsuarioRequestDTO.builder()
                 .documento("99999999")
                 .correo("admin@preicfes.com")
@@ -166,16 +218,17 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void register_cuandoRolNoExiste_lanzaResourceNotFoundException() {
+    void register_cuandoRolEstudianteNoExiste_lanzaResourceNotFoundException() {
+        ReflectionTestUtils.setField(authService, "selfRegisterEnabled", true);
         UsuarioRequestDTO request = UsuarioRequestDTO.builder()
                 .documento("99999999")
                 .correo("nuevo@preicfes.com")
-                .idRol(99L)
+                .idRol(4L)
                 .build();
 
         when(usuarioRepository.existsByDocumento("99999999")).thenReturn(false);
         when(usuarioRepository.existsByCorreo("nuevo@preicfes.com")).thenReturn(false);
-        when(rolRepository.findById(99L)).thenReturn(Optional.empty());
+        when(rolRepository.findByNombre("ESTUDIANTE")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(ResourceNotFoundException.class);

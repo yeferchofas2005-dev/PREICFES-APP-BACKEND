@@ -3,6 +3,7 @@ package com.edu.preicfesGratuito.exception;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -96,6 +97,17 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return buildResponse(HttpStatus.UNAUTHORIZED, "No autorizado", exception.getMessage(), request.getRequestURI(), null);
+    }
+
+    /**
+     * Procesa errores de acceso denegado por permisos o reglas de aislamiento por rol/nodo.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponseDTO> handleAccessDenied(
+            AccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.FORBIDDEN, "Acceso denegado", exception.getMessage(), request.getRequestURI(), null);
     }
 
     /**

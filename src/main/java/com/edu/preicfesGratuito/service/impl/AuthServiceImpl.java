@@ -5,6 +5,7 @@ import com.edu.preicfesGratuito.dto.LoginRequestDTO;
 import com.edu.preicfesGratuito.dto.UsuarioRequestDTO;
 import com.edu.preicfesGratuito.entity.Rol;
 import com.edu.preicfesGratuito.entity.Usuario;
+import com.edu.preicfesGratuito.enums.RolNombre;
 import com.edu.preicfesGratuito.exception.BadRequestException;
 import com.edu.preicfesGratuito.exception.ResourceNotFoundException;
 import com.edu.preicfesGratuito.mapper.UsuarioMapper;
@@ -14,6 +15,8 @@ import com.edu.preicfesGratuito.security.UserDetailsImpl;
 import com.edu.preicfesGratuito.service.AuthService;
 import com.edu.preicfesGratuito.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
@@ -39,6 +42,9 @@ public class AuthServiceImpl implements AuthService {
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
     private final UsuarioMapper usuarioMapper;
+
+    @Value("${app.auth.self-register-enabled:false}")
+    private boolean selfRegisterEnabled;
 
     /**
      * Autentica al usuario usando Spring Security y retorna un JWT si las credenciales son validas.
@@ -76,6 +82,12 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public AuthResponseDTO register(UsuarioRequestDTO request) {
+        if (!selfRegisterEnabled) {
+            throw new AccessDeniedException(
+                    "El autorregistro público está deshabilitado. Solicita tu cuenta a un administrador o coordinador."
+            );
+        }
+
         if (usuarioRepository.existsByDocumento(request.getDocumento())) {
             throw new BadRequestException("Ya existe un usuario con ese documento");
         }
@@ -84,11 +96,15 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Ya existe un usuario con ese correo");
         }
 
-        Rol rol = rolRepository.findById(request.getIdRol())
-                .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado con id: " + request.getIdRol()));
+        Rol rolEstudiante = rolRepository.findByNombre(RolNombre.ESTUDIANTE.name())
+                .orElseThrow(() -> new ResourceNotFoundException("Rol ESTUDIANTE no encontrado"));
+
+        if (request.getIdRol() != null && !rolEstudiante.getIdRol().equals(request.getIdRol())) {
+            throw new AccessDeniedException("El registro público solo permite crear cuentas de rol ESTUDIANTE");
+        }
 
         Usuario usuario = Usuario.builder()
-                .rol(rol)
+                .rol(rolEstudiante)
                 .nombres(request.getNombres())
                 .apellidos(request.getApellidos())
                 .documento(request.getDocumento())

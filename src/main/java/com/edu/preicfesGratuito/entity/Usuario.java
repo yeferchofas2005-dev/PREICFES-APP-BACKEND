@@ -34,6 +34,10 @@ public class Usuario {
     @JoinColumn(name = "id_rol", nullable = false)
     private Rol rol;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_nodo")
+    private Nodo nodo;
+
     @Column(name = "nombres", nullable = false, length = 100)
     private String nombres;
 

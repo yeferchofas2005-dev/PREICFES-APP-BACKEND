@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -90,4 +91,15 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
             @Param("activo") Boolean activo,
             Pageable pageable
     );
+    /**
+     * Consulta documentos ya existentes en BD para validacion en lote.
+     */
+    @Query("SELECT u.documento FROM Usuario u WHERE u.documento IN :documentos")
+    List<String> findDocumentosExistentes(@Param("documentos") Collection<String> documentos);
+
+    /**
+     * Consulta correos (en minusculas) ya existentes en BD para validacion en lote.
+     */
+    @Query("SELECT LOWER(u.correo) FROM Usuario u WHERE LOWER(u.correo) IN :correos")
+    List<String> findCorreosExistentes(@Param("correos") Collection<String> correos);
 }

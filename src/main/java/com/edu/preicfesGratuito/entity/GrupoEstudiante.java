@@ -2,6 +2,8 @@ package com.edu.preicfesGratuito.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.domain.Persistable;
+
 import java.time.LocalDate;
 
 /**
@@ -19,7 +21,7 @@ import java.time.LocalDate;
 @Builder
 @ToString
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-public class GrupoEstudiante {
+public class GrupoEstudiante implements Persistable<Long> {
 
     @Id
     @Column(name = "id_estudiante")
@@ -41,4 +43,24 @@ public class GrupoEstudiante {
 
     @Column(name = "fecha_ingreso")
     private LocalDate fechaIngreso;
+
+    @Transient
+    @Builder.Default
+    private boolean nuevo = true;
+
+    @Override
+    public Long getId() {
+        return idEstudiante;
+    }
+
+    @Override
+    public boolean isNew() {
+        return nuevo;
+    }
+
+    @PostLoad
+    @PostPersist
+    void marcarPersistido() {
+        this.nuevo = false;
+    }
 }

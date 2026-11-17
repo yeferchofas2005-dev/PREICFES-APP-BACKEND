@@ -2,13 +2,17 @@ package com.edu.preicfesGratuito.controller;
 
 import com.edu.preicfesGratuito.dto.*;
 import com.edu.preicfesGratuito.security.UserDetailsImpl;
+import com.edu.preicfesGratuito.service.CargaMasivaUsuarioService;
 import com.edu.preicfesGratuito.service.UsuarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Controlador REST para que el Coordinador (DIRECTIVO) gestione profesores
@@ -19,7 +23,12 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class CoordinadorUsuarioController {
 
+    private static final MediaType EXCEL_MEDIA_TYPE = MediaType.parseMediaType(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
     private final UsuarioService usuarioService;
+    private final CargaMasivaUsuarioService cargaMasivaUsuarioService;
 
     @GetMapping
     public ResponseEntity<PaginaResponseDTO<UsuarioResponseDTO>> listar(
@@ -76,6 +85,25 @@ public class CoordinadorUsuarioController {
     ) {
         return ResponseEntity.ok(
                 usuarioService.cambiarEstadoParaCoordinador(userDetails.getIdUsuario(), id, request)
+        );
+    }
+
+    @GetMapping("/plantilla-estudiantes")
+    public ResponseEntity<byte[]> descargarPlantilla() {
+        byte[] contenido = cargaMasivaUsuarioService.generarPlantillaExcel();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"plantilla_carga_estudiantes.xlsx\"")
+                .contentType(EXCEL_MEDIA_TYPE)
+                .body(contenido);
+    }
+
+    @PostMapping(value = "/carga-masiva", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CargaMasivaUsuariosResponseDTO> cargarMasiva(
+            @RequestParam("archivo") MultipartFile archivo,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        return ResponseEntity.ok(
+                cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(userDetails.getIdUsuario(), null, archivo, false)
         );
     }
 }

@@ -85,4 +85,13 @@ class UsuarioRepositoryTest {
                     assertThat(u.getActivo()).isTrue();
                 });
     }
+
+    @Test
+    void findDocumentosYCorreosExistentes_retornaSoloCoincidenciasEnLote() {
+        List<String> docs = usuarioRepository.findDocumentosExistentes(List.of("100000001", "100000004", "999999999"));
+        List<String> correos = usuarioRepository.findCorreosExistentes(List.of("admin@preicfes.com", "noexiste@preicfes.com"));
+
+        assertThat(docs).containsExactlyInAnyOrder("100000001", "100000004");
+        assertThat(correos).containsExactly("admin@preicfes.com");
+    }
 }

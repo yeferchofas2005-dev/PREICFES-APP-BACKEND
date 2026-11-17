@@ -3,17 +3,24 @@ package com.edu.preicfesGratuito.controller;
 import com.edu.preicfesGratuito.dto.UsuarioRequestDTO;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
+
+import java.io.ByteArrayOutputStream;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -129,5 +136,55 @@ class UsuarioEndpointsIntegrationTest {
                         .content("{\"activo\":false}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.activo").value(false));
+    }
+
+    @Test
+    void cargaMasivaCoordinador_descargaPlantillaYProcesaLoteMixto() throws Exception {
+        String directivoToken = obtenerToken("directivo@preicfes.com", "123456");
+
+        mockMvc.perform(get("/api/directivo/usuarios/plantilla-estudiantes")
+                        .header("Authorization", "Bearer " + directivoToken))
+                .andExpect(status().isOk());
+
+        byte[] excelBytes;
+        try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            Sheet sheet = wb.createSheet("Estudiantes");
+            Row h = sheet.createRow(0);
+            String[] cols = {"nombres", "apellidos", "documento", "correo", "telefono", "grupo_salon", "password"};
+            for (int i = 0; i < cols.length; i++) h.createCell(i).setCellValue(cols[i]);
+
+            Row f1 = sheet.createRow(1);
+            f1.createCell(0).setCellValue("Valeria");
+            f1.createCell(1).setCellValue("Lote");
+            f1.createCell(2).setCellValue("99000111");
+            f1.createCell(3).setCellValue("valeria.lote@preicfes.com");
+            f1.createCell(4).setCellValue("3110000000");
+            f1.createCell(5).setCellValue("Kennedy-1001");
+
+            Row f2 = sheet.createRow(2);
+            f2.createCell(0).setCellValue("Duplicado");
+            f2.createCell(1).setCellValue("Seed");
+            f2.createCell(2).setCellValue("100000004");
+            f2.createCell(3).setCellValue("dup.seed@preicfes.com");
+
+            wb.write(out);
+            excelBytes = out.toByteArray();
+        }
+
+        MockMultipartFile file = new MockMultipartFile(
+                "archivo", "lote.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                excelBytes
+        );
+
+        mockMvc.perform(multipart("/api/directivo/usuarios/carga-masiva")
+                        .file(file)
+                        .header("Authorization", "Bearer " + directivoToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalFilasProcesadas").value(2))
+                .andExpect(jsonPath("$.exitosos").value(1))
+                .andExpect(jsonPath("$.fallidos").value(1))
+                .andExpect(jsonPath("$.vinculadosAGrupo").value(1))
+                .andExpect(jsonPath("$.errores[0].fila").value(3));
     }
 }

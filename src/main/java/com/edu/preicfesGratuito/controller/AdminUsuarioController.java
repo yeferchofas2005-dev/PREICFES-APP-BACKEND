@@ -2,13 +2,17 @@ package com.edu.preicfesGratuito.controller;
 
 import com.edu.preicfesGratuito.dto.*;
 import com.edu.preicfesGratuito.security.UserDetailsImpl;
+import com.edu.preicfesGratuito.service.CargaMasivaUsuarioService;
 import com.edu.preicfesGratuito.service.UsuarioService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Controlador REST para la gestion integral de usuarios por parte del Administrador.
@@ -18,7 +22,12 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AdminUsuarioController {
 
+    private static final MediaType EXCEL_MEDIA_TYPE = MediaType.parseMediaType(
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
     private final UsuarioService usuarioService;
+    private final CargaMasivaUsuarioService cargaMasivaUsuarioService;
 
     @GetMapping
     public ResponseEntity<PaginaResponseDTO<UsuarioResponseDTO>> listar(
@@ -62,5 +71,26 @@ public class AdminUsuarioController {
             @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
         return ResponseEntity.ok(usuarioService.cambiarEstadoParaAdmin(userDetails.getIdUsuario(), id, request));
+    }
+
+    @GetMapping("/plantilla-estudiantes")
+    public ResponseEntity<byte[]> descargarPlantilla() {
+        byte[] contenido = cargaMasivaUsuarioService.generarPlantillaExcel();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"plantilla_carga_estudiantes.xlsx\"")
+                .contentType(EXCEL_MEDIA_TYPE)
+                .body(contenido);
+    }
+
+    @PostMapping(value = "/carga-masiva", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CargaMasivaUsuariosResponseDTO> cargarMasiva(
+            @RequestParam("archivo") MultipartFile archivo,
+            @RequestParam("idNodo") Long idNodo,
+            @AuthenticationPrincipal UserDetailsImpl userDetails
+    ) {
+        Long idActor = userDetails != null ? userDetails.getIdUsuario() : null;
+        return ResponseEntity.ok(
+                cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(idActor, idNodo, archivo, true)
+        );
     }
 }

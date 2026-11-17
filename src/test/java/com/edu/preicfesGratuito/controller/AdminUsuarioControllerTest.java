@@ -3,6 +3,7 @@ package com.edu.preicfesGratuito.controller;
 import com.edu.preicfesGratuito.dto.*;
 import com.edu.preicfesGratuito.exception.BadRequestException;
 import com.edu.preicfesGratuito.exception.GlobalExceptionHandler;
+import com.edu.preicfesGratuito.service.CargaMasivaUsuarioService;
 import com.edu.preicfesGratuito.service.UsuarioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -13,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -22,8 +24,7 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class AdminUsuarioControllerTest {
@@ -33,6 +34,9 @@ class AdminUsuarioControllerTest {
 
     @Mock
     private UsuarioService usuarioService;
+
+    @Mock
+    private CargaMasivaUsuarioService cargaMasivaUsuarioService;
 
     @InjectMocks
     private AdminUsuarioController adminUsuarioController;
@@ -135,5 +139,32 @@ class AdminUsuarioControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.roles[0].nombre").value("ADMIN"))
                 .andExpect(jsonPath("$.nodos[0].nombre").value("Kennedy Central"));
+    }
+
+    @Test
+    void descargarPlantilla_retornaExcel200() throws Exception {
+        when(cargaMasivaUsuarioService.generarPlantillaExcel()).thenReturn(new byte[]{1, 2, 3});
+
+        mockMvc.perform(get("/api/admin/usuarios/plantilla-estudiantes"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("plantilla_carga_estudiantes.xlsx")));
+    }
+
+    @Test
+    void cargarMasiva_cuandoArchivoValido_retornaResumen200() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("archivo", "estudiantes.xlsx", "application/octet-stream", new byte[]{1, 2});
+        when(cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(isNull(), eq(1L), any(), eq(true)))
+                .thenReturn(CargaMasivaUsuariosResponseDTO.builder()
+                        .totalFilasProcesadas(2)
+                        .exitosos(1)
+                        .fallidos(1)
+                        .vinculadosAGrupo(1)
+                        .errores(List.of(CargaMasivaErrorDTO.builder().fila(3).motivo("Duplicado").build()))
+                        .build());
+
+        mockMvc.perform(multipart("/api/admin/usuarios/carga-masiva").file(file).param("idNodo", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.exitosos").value(1))
+                .andExpect(jsonPath("$.fallidos").value(1));
     }
 }

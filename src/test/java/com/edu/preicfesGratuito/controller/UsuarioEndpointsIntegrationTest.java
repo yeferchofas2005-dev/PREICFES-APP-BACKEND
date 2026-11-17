@@ -20,11 +20,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @Transactional
@@ -186,5 +187,40 @@ class UsuarioEndpointsIntegrationTest {
                 .andExpect(jsonPath("$.fallidos").value(1))
                 .andExpect(jsonPath("$.vinculadosAGrupo").value(1))
                 .andExpect(jsonPath("$.errores[0].fila").value(3));
+    }
+
+    @Test
+    void exportacionExcel_adminGlobalYCoordinadorSoloSuNodo() throws Exception {
+        String adminToken = obtenerToken("admin@preicfes.com", "123456");
+        String directivoToken = obtenerToken("directivo@preicfes.com", "123456");
+        String estudianteToken = obtenerToken("estudiante@preicfes.com", "123456");
+
+        mockMvc.perform(get("/api/admin/usuarios/exportar")
+                        .header("Authorization", "Bearer " + estudianteToken))
+                .andExpect(status().isForbidden());
+
+        MvcResult adminRes = mockMvc.perform(get("/api/admin/usuarios/exportar")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        try (Workbook wb = new XSSFWorkbook(new ByteArrayInputStream(adminRes.getResponse().getContentAsByteArray()))) {
+            Sheet sheet = wb.getSheet("Usuarios");
+            assertThat(sheet.getRow(0).getLastCellNum()).isEqualTo((short) 9);
+            assertThat(sheet.getPhysicalNumberOfRows()).isGreaterThanOrEqualTo(5);
+        }
+
+        MvcResult dirRes = mockMvc.perform(get("/api/directivo/usuarios/exportar")
+                        .header("Authorization", "Bearer " + directivoToken))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        try (Workbook wb = new XSSFWorkbook(new ByteArrayInputStream(dirRes.getResponse().getContentAsByteArray()))) {
+            Sheet sheet = wb.getSheet("Usuarios");
+            for (int r = 1; r <= sheet.getLastRowNum(); r++) {
+                String rol = sheet.getRow(r).getCell(5).getStringCellValue();
+                assertThat(rol).isIn("PROFESOR", "ESTUDIANTE");
+            }
+        }
     }
 }

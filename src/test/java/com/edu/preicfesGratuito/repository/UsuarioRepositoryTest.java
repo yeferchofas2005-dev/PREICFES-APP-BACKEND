@@ -94,4 +94,26 @@ class UsuarioRepositoryTest {
         assertThat(docs).containsExactlyInAnyOrder("100000001", "100000004");
         assertThat(correos).containsExactly("admin@preicfes.com");
     }
+
+    @Test
+    void findParaExportacion_retornaProyeccionesConGrupoYSinN1() {
+        List<UsuarioExportacionProjection> rows = usuarioRepository.findParaExportacion(
+                null,
+                null,
+                List.of("PROFESOR", "ESTUDIANTE"),
+                1L,
+                true
+        );
+
+        assertThat(rows).isNotEmpty();
+        assertThat(rows).allSatisfy(r -> assertThat(r.getRol()).isIn("PROFESOR", "ESTUDIANTE"));
+        assertThat(rows).anySatisfy(r -> {
+            assertThat(r.getCorreo()).isEqualTo("estudiante@preicfes.com");
+            assertThat(r.getGrupoSalon()).isEqualTo("Kennedy-1001");
+        });
+        assertThat(rows).anySatisfy(r -> {
+            assertThat(r.getCorreo()).isEqualTo("profesor@preicfes.com");
+            assertThat(r.getGrupoSalon()).contains("Kennedy-1001");
+        });
+    }
 }

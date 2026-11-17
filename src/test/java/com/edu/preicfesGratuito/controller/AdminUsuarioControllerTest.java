@@ -4,6 +4,7 @@ import com.edu.preicfesGratuito.dto.*;
 import com.edu.preicfesGratuito.exception.BadRequestException;
 import com.edu.preicfesGratuito.exception.GlobalExceptionHandler;
 import com.edu.preicfesGratuito.service.CargaMasivaUsuarioService;
+import com.edu.preicfesGratuito.service.ExportacionUsuarioService;
 import com.edu.preicfesGratuito.service.UsuarioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -37,6 +38,9 @@ class AdminUsuarioControllerTest {
 
     @Mock
     private CargaMasivaUsuarioService cargaMasivaUsuarioService;
+
+    @Mock
+    private ExportacionUsuarioService exportacionUsuarioService;
 
     @InjectMocks
     private AdminUsuarioController adminUsuarioController;
@@ -166,5 +170,18 @@ class AdminUsuarioControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.exitosos").value(1))
                 .andExpect(jsonPath("$.fallidos").value(1));
+    }
+
+    @Test
+    void exportar_retornaExcel200() throws Exception {
+        org.mockito.Mockito.doAnswer(inv -> {
+            java.io.OutputStream os = inv.getArgument(4);
+            os.write(new byte[]{1, 2, 3});
+            return null;
+        }).when(exportacionUsuarioService).exportarParaAdmin(any(), any(), any(), any(), any());
+
+        mockMvc.perform(get("/api/admin/usuarios/exportar"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Disposition", org.hamcrest.Matchers.containsString("usuarios_rumbo_a_la_u.xlsx")));
     }
 }

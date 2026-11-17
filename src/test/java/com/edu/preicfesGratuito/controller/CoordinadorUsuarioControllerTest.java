@@ -6,6 +6,7 @@ import com.edu.preicfesGratuito.entity.Usuario;
 import com.edu.preicfesGratuito.exception.GlobalExceptionHandler;
 import com.edu.preicfesGratuito.security.UserDetailsImpl;
 import com.edu.preicfesGratuito.service.CargaMasivaUsuarioService;
+import com.edu.preicfesGratuito.service.ExportacionUsuarioService;
 import com.edu.preicfesGratuito.service.UsuarioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -43,6 +44,9 @@ class CoordinadorUsuarioControllerTest {
 
     @Mock
     private CargaMasivaUsuarioService cargaMasivaUsuarioService;
+
+    @Mock
+    private ExportacionUsuarioService exportacionUsuarioService;
 
     @InjectMocks
     private CoordinadorUsuarioController coordinadorUsuarioController;
@@ -137,5 +141,19 @@ class CoordinadorUsuarioControllerTest {
         mockMvc.perform(multipart("/api/directivo/usuarios/carga-masiva").file(file))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.exitosos").value(1));
+    }
+
+    @Test
+    void exportar_retornaExcel200ParaCoordinador() throws Exception {
+        org.mockito.Mockito.doAnswer(inv -> {
+            java.io.OutputStream os = inv.getArgument(4);
+            os.write(new byte[]{1, 2, 3});
+            return null;
+        }).when(exportacionUsuarioService).exportarParaCoordinador(eq(2L), any(), any(), any(), any());
+
+        mockMvc.perform(get("/api/directivo/usuarios/exportar"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Content-Disposition", org.hamcrest.Matchers.containsString("usuarios_nodo.xlsx")));
     }
 }

@@ -1,13 +1,11 @@
 package com.edu.preicfesGratuito.controller;
 
-import com.edu.preicfesGratuito.dto.CambiarEstadoDTO;
-import com.edu.preicfesGratuito.dto.PaginaResponseDTO;
-import com.edu.preicfesGratuito.dto.UsuarioCrearDTO;
-import com.edu.preicfesGratuito.dto.UsuarioResponseDTO;
+import com.edu.preicfesGratuito.dto.*;
 import com.edu.preicfesGratuito.entity.Rol;
 import com.edu.preicfesGratuito.entity.Usuario;
 import com.edu.preicfesGratuito.exception.GlobalExceptionHandler;
 import com.edu.preicfesGratuito.security.UserDetailsImpl;
+import com.edu.preicfesGratuito.service.CargaMasivaUsuarioService;
 import com.edu.preicfesGratuito.service.UsuarioService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -18,6 +16,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -41,6 +40,9 @@ class CoordinadorUsuarioControllerTest {
 
     @Mock
     private UsuarioService usuarioService;
+
+    @Mock
+    private CargaMasivaUsuarioService cargaMasivaUsuarioService;
 
     @InjectMocks
     private CoordinadorUsuarioController coordinadorUsuarioController;
@@ -118,5 +120,22 @@ class CoordinadorUsuarioControllerTest {
                         .content(objectMapper.writeValueAsString(new CambiarEstadoDTO(false))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.activo").value(false));
+    }
+
+    @Test
+    void cargarMasiva_usaIdCoordinadorAutenticadoYRetorna200() throws Exception {
+        MockMultipartFile file = new MockMultipartFile("archivo", "est.xlsx", "application/octet-stream", new byte[]{1, 2});
+        when(cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(eq(2L), isNull(), any(), eq(false)))
+                .thenReturn(CargaMasivaUsuariosResponseDTO.builder()
+                        .totalFilasProcesadas(1)
+                        .exitosos(1)
+                        .fallidos(0)
+                        .vinculadosAGrupo(1)
+                        .errores(List.of())
+                        .build());
+
+        mockMvc.perform(multipart("/api/directivo/usuarios/carga-masiva").file(file))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.exitosos").value(1));
     }
 }

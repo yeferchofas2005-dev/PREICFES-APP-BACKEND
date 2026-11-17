@@ -102,4 +102,48 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
      */
     @Query("SELECT LOWER(u.correo) FROM Usuario u WHERE LOWER(u.correo) IN :correos")
     List<String> findCorreosExistentes(@Param("correos") Collection<String> correos);
+
+    /**
+     * Proyeccion nativa en una sola consulta (sin N+1) para exportacion masiva a Excel.
+     */
+    @Query(
+            value = "SELECT " +
+                    "  u.nombres AS nombres, " +
+                    "  u.apellidos AS apellidos, " +
+                    "  u.documento AS documento, " +
+                    "  u.correo AS correo, " +
+                    "  u.telefono AS telefono, " +
+                    "  r.nombre AS rol, " +
+                    "  COALESCE(n.nombre, '') AS nodo, " +
+                    "  COALESCE(g_est.nombre, gp.grupos_prof, '') AS grupoSalon, " +
+                    "  u.activo AS activo " +
+                    "FROM usuario u " +
+                    "INNER JOIN rol r ON u.id_rol = r.id_rol " +
+                    "LEFT JOIN nodo n ON u.id_nodo = n.id_nodo " +
+                    "LEFT JOIN grupo_estudiante ge ON ge.id_estudiante = u.id_usuario " +
+                    "LEFT JOIN grupo g_est ON ge.id_grupo = g_est.id_grupo AND g_est.activo = TRUE " +
+                    "LEFT JOIN ( " +
+                    "  SELECT id_profesor, GROUP_CONCAT(nombre ORDER BY nombre SEPARATOR ', ') AS grupos_prof " +
+                    "  FROM grupo " +
+                    "  WHERE activo = TRUE " +
+                    "  GROUP BY id_profesor " +
+                    ") gp ON gp.id_profesor = u.id_usuario " +
+                    "WHERE (:busqueda IS NULL OR LOWER(u.nombres) LIKE :busqueda " +
+                    "   OR LOWER(u.apellidos) LIKE :busqueda " +
+                    "   OR LOWER(u.documento) LIKE :busqueda " +
+                    "   OR LOWER(u.correo) LIKE :busqueda) " +
+                    "  AND (:idRol IS NULL OR r.id_rol = :idRol) " +
+                    "  AND r.nombre IN (:rolesPermitidos) " +
+                    "  AND (:idNodo IS NULL OR n.id_nodo = :idNodo) " +
+                    "  AND (:activo IS NULL OR u.activo = :activo) " +
+                    "ORDER BY u.apellidos ASC, u.nombres ASC, u.id_usuario ASC",
+            nativeQuery = true
+    )
+    List<UsuarioExportacionProjection> findParaExportacion(
+            @Param("busqueda") String busqueda,
+            @Param("idRol") Long idRol,
+            @Param("rolesPermitidos") List<String> rolesPermitidos,
+            @Param("idNodo") Long idNodo,
+            @Param("activo") Boolean activo
+    );
 }

@@ -105,10 +105,13 @@ public class CoordinadorUsuarioController {
     @PostMapping(value = "/carga-masiva", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CargaMasivaUsuariosResponseDTO> cargarMasiva(
             @RequestParam("archivo") MultipartFile archivo,
+            @RequestParam(value = "encolarEnvio", defaultValue = "false") boolean encolarEnvio,
             @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
         return ResponseEntity.ok(
-                cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(userDetails.getIdUsuario(), null, archivo, false)
+                cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(
+                        userDetails.getIdUsuario(), null, archivo, false, encolarEnvio
+                )
         );
     }
 

@@ -10,6 +10,7 @@ import com.edu.preicfesGratuito.mapper.UsuarioMapper;
 import com.edu.preicfesGratuito.repository.NodoRepository;
 import com.edu.preicfesGratuito.repository.RolRepository;
 import com.edu.preicfesGratuito.repository.UsuarioRepository;
+import com.edu.preicfesGratuito.service.EnvioCredencialService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -43,6 +44,8 @@ class UsuarioServiceImplTest {
     private NodoRepository nodoRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private EnvioCredencialService envioCredencialService;
 
     @Spy
     private UsuarioMapper usuarioMapper = new UsuarioMapper();
@@ -155,6 +158,34 @@ class UsuarioServiceImplTest {
         ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(captor.capture());
         assertThat(captor.getValue().getPasswordHash()).isEqualTo("$2a$10$encoded");
+        verifyNoInteractions(envioCredencialService);
+    }
+
+    @Test
+    void crearParaAdmin_cuandoSolicitaEnvioCorreo_invocaEnvioCredencialService() {
+        UsuarioCrearDTO request = UsuarioCrearDTO.builder()
+                .nombres("Pedro")
+                .apellidos("Admin")
+                .documento("20003")
+                .correo("pedro2@preicfes.com")
+                .password("Secreta123")
+                .idRol(1L)
+                .enviarCredencialesPorCorreo(true)
+                .build();
+
+        when(rolRepository.findById(1L)).thenReturn(Optional.of(rolAdmin));
+        when(usuarioRepository.existsByDocumento("20003")).thenReturn(false);
+        when(usuarioRepository.existsByCorreo("pedro2@preicfes.com")).thenReturn(false);
+        when(passwordEncoder.encode("Secreta123")).thenReturn("$2a$10$encoded");
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> {
+            Usuario u = inv.getArgument(0);
+            u.setIdUsuario(100L);
+            return u;
+        });
+
+        usuarioService.crearParaAdmin(request);
+
+        verify(envioCredencialService).registrarEnvioManual(any(Usuario.class), eq("Secreta123"));
     }
 
     @Test

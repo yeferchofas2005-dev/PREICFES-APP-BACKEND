@@ -4,6 +4,7 @@ import com.edu.preicfesGratuito.dto.CargaMasivaUsuariosResponseDTO;
 import com.edu.preicfesGratuito.entity.*;
 import com.edu.preicfesGratuito.exception.BadRequestException;
 import com.edu.preicfesGratuito.repository.*;
+import com.edu.preicfesGratuito.service.EnvioCredencialService;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -42,6 +43,8 @@ class CargaMasivaUsuarioServiceImplTest {
     private GrupoEstudianteRepository grupoEstudianteRepository;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private EnvioCredencialService envioCredencialService;
 
     @InjectMocks
     private CargaMasivaUsuarioServiceImpl service;
@@ -85,7 +88,9 @@ class CargaMasivaUsuarioServiceImplTest {
                 new String[]{"Duplicado", "Archivo", "20001", "dup@preicfes.com", "", "", ""},
                 new String[]{"Existente", "BD", "100000004", "existente@preicfes.com", "", "", ""},
                 new String[]{"Grupo", "Malo", "20003", "grupomalo@preicfes.com", "", "NoExiste-999", ""},
-                new String[]{"Correo", "Malo", "20004", "correo-invalido", "", "", ""}
+                new String[]{"Correo", "Malo", "20004", "correo-invalido", "", "", ""},
+                new String[]{"Doc", "Letras", "abcde", "docletras@preicfes.com", "", "", ""},
+                new String[]{"Tel", "Letras", "20005", "telletras@preicfes.com", "nocelular", "", ""}
         ));
 
         MockMultipartFile file = new MockMultipartFile(
@@ -111,13 +116,15 @@ class CargaMasivaUsuarioServiceImplTest {
 
         CargaMasivaUsuariosResponseDTO res = service.cargarEstudiantesDesdeExcel(1L, 1L, file, true);
 
-        assertThat(res.getTotalFilasProcesadas()).isEqualTo(6);
+        assertThat(res.getTotalFilasProcesadas()).isEqualTo(8);
         assertThat(res.getExitosos()).isEqualTo(2);
-        assertThat(res.getFallidos()).isEqualTo(4);
+        assertThat(res.getFallidos()).isEqualTo(6);
         assertThat(res.getVinculadosAGrupo()).isEqualTo(1);
-        assertThat(res.getErrores()).hasSize(4);
-        verify(passwordEncoder).encode("20001");
+        assertThat(res.getEncoladosParaEnvio()).isZero();
+        assertThat(res.getErrores()).hasSize(6);
+        verify(passwordEncoder).encode(argThat(pwd -> pwd != null && pwd.length() == 10 && !pwd.equals("20001")));
         verify(passwordEncoder).encode("Clave123");
+        verifyNoInteractions(envioCredencialService);
         verify(grupoEstudianteRepository).saveAllAndFlush(argThat(iterable -> {
             int count = 0;
             for (Object ignored : iterable) count++;
@@ -126,7 +133,7 @@ class CargaMasivaUsuarioServiceImplTest {
     }
 
     @Test
-    void cargarEstudiantes_cuandoCoordinador_usaNodoPropioDelCoordinador() throws Exception {
+    void cargarEstudiantes_cuandoCoordinadorYEncolarEnvio_encolaEstudiantesConPasswordGenerada() throws Exception {
         byte[] excelBytes = crearExcelPrueba(List.<String[]>of(
                 new String[]{"Sofia", "Diaz", "30001", "sofia@preicfes.com", "", "Kennedy-1001", ""}
         ));
@@ -137,17 +144,19 @@ class CargaMasivaUsuarioServiceImplTest {
         when(grupoRepository.findByNodoIdNodoAndActivoTrue(1L)).thenReturn(List.of(grupoKennedy));
         when(usuarioRepository.findDocumentosExistentes(anyCollection())).thenReturn(List.of());
         when(usuarioRepository.findCorreosExistentes(anyCollection())).thenReturn(List.of());
-        when(passwordEncoder.encode("30001")).thenReturn("$2a$10$hash");
+        when(passwordEncoder.encode(anyString())).thenReturn("$2a$10$hash");
         when(usuarioRepository.saveAllAndFlush(anyList())).thenAnswer(inv -> {
             List<Usuario> lista = inv.getArgument(0);
             lista.get(0).setIdUsuario(200L);
             return lista;
         });
 
-        CargaMasivaUsuariosResponseDTO res = service.cargarEstudiantesDesdeExcel(2L, null, file, false);
+        CargaMasivaUsuariosResponseDTO res = service.cargarEstudiantesDesdeExcel(2L, null, file, false, true);
 
         assertThat(res.getExitosos()).isEqualTo(1);
         assertThat(res.getVinculadosAGrupo()).isEqualTo(1);
+        assertThat(res.getEncoladosParaEnvio()).isEqualTo(1);
+        verify(envioCredencialService).encolarLoteMasivo(argThat(lista -> lista.size() == 1 && lista.get(0).passwordPlano().length() == 10));
         verifyNoInteractions(nodoRepository);
     }
 

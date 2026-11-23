@@ -8,6 +8,9 @@ import com.edu.preicfesGratuito.exception.BadRequestException;
 import com.edu.preicfesGratuito.exception.ResourceNotFoundException;
 import com.edu.preicfesGratuito.repository.*;
 import com.edu.preicfesGratuito.service.CargaMasivaUsuarioService;
+import com.edu.preicfesGratuito.service.EnvioCredencialService;
+import com.edu.preicfesGratuito.util.PasswordGeneratorUtil;
+import com.edu.preicfesGratuito.util.UsuarioValidationPatterns;
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -21,7 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.regex.Pattern;
 
 /**
  * Implementacion eficiente de carga masiva de estudiantes desde archivos .xlsx.
@@ -34,7 +36,6 @@ import java.util.regex.Pattern;
 public class CargaMasivaUsuarioServiceImpl implements CargaMasivaUsuarioService {
 
     private static final int BATCH_SIZE = 500;
-    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private static final List<String> COLUMNAS_PLANTILLA = List.of(
             "nombres", "apellidos", "documento", "correo", "telefono", "grupo_salon", "password"
     );
@@ -45,6 +46,7 @@ public class CargaMasivaUsuarioServiceImpl implements CargaMasivaUsuarioService 
     private final GrupoRepository grupoRepository;
     private final GrupoEstudianteRepository grupoEstudianteRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EnvioCredencialService envioCredencialService;
 
     @Override
     public byte[] generarPlantillaExcel() {
@@ -86,7 +88,7 @@ public class CargaMasivaUsuarioServiceImpl implements CargaMasivaUsuarioService 
     @Override
     @Transactional
     public CargaMasivaUsuariosResponseDTO cargarEstudiantesDesdeExcel(
-            Long idActor, Long idNodoDestino, MultipartFile archivo, boolean esAdmin
+            Long idActor, Long idNodoDestino, MultipartFile archivo, boolean esAdmin, boolean encolarEnvio
     ) {
         validarArchivoExcel(archivo);
 
@@ -125,6 +127,7 @@ public class CargaMasivaUsuarioServiceImpl implements CargaMasivaUsuarioService 
         int exitosos = 0;
         int vinculadosAGrupo = 0;
         LocalDate hoy = LocalDate.now();
+        List<EnvioCredencialService.RegistroEnvioMasivo> paraEncolar = new ArrayList<>();
 
         for (int i = 0; i < validasParaPersistir.size(); i += BATCH_SIZE) {
             List<FilaCandidata> chunk = validasParaPersistir.subList(i, Math.min(i + BATCH_SIZE, validasParaPersistir.size()));
@@ -147,9 +150,14 @@ public class CargaMasivaUsuarioServiceImpl implements CargaMasivaUsuarioService 
 
             List<GrupoEstudiante> vinculaciones = new ArrayList<>();
             for (int idx = 0; idx < chunk.size(); idx++) {
+                Usuario estudiante = guardados.get(idx);
+                if (encolarEnvio) {
+                    paraEncolar.add(new EnvioCredencialService.RegistroEnvioMasivo(
+                            estudiante, chunk.get(idx).passwordPlano()
+                    ));
+                }
                 Grupo grupo = chunk.get(idx).grupo();
                 if (grupo != null) {
-                    Usuario estudiante = guardados.get(idx);
                     vinculaciones.add(GrupoEstudiante.builder()
                             .idEstudiante(estudiante.getIdUsuario())
                             .grupo(grupo)
@@ -164,6 +172,10 @@ public class CargaMasivaUsuarioServiceImpl implements CargaMasivaUsuarioService 
             }
         }
 
+        if (encolarEnvio && !paraEncolar.isEmpty()) {
+            envioCredencialService.encolarLoteMasivo(paraEncolar);
+        }
+
         errores.sort(Comparator.comparingInt(CargaMasivaErrorDTO::getFila));
 
         return CargaMasivaUsuariosResponseDTO.builder()
@@ -171,6 +183,7 @@ public class CargaMasivaUsuarioServiceImpl implements CargaMasivaUsuarioService 
                 .exitosos(exitosos)
                 .fallidos(errores.size())
                 .vinculadosAGrupo(vinculadosAGrupo)
+                .encoladosParaEnvio(paraEncolar.size())
                 .errores(errores)
                 .build();
     }
@@ -309,12 +322,24 @@ public class CargaMasivaUsuarioServiceImpl implements CargaMasivaUsuarioService 
                         "Uno o más campos superan la longitud máxima permitida"));
                 continue;
             }
-            if (!EMAIL_PATTERN.matcher(correo).matches()) {
+            if (!UsuarioValidationPatterns.NOMBRE_PERSONA_PATTERN.matcher(nombres).matches()
+                    || !UsuarioValidationPatterns.NOMBRE_PERSONA_PATTERN.matcher(apellidos).matches()) {
+                errores.add(errorFila(fila.numeroFila(), documento, correo,
+                        "Nombres y apellidos solo deben contener letras y espacios"));
+                continue;
+            }
+            if (!UsuarioValidationPatterns.DOCUMENTO_PATTERN.matcher(documento).matches()) {
+                errores.add(errorFila(fila.numeroFila(), documento, correo,
+                        "El documento solo debe contener entre 5 y 20 dígitos numéricos"));
+                continue;
+            }
+            if (!UsuarioValidationPatterns.CORREO_PATTERN.matcher(correo).matches()) {
                 errores.add(errorFila(fila.numeroFila(), documento, correo, "Formato de correo electrónico inválido"));
                 continue;
             }
-            if (telefono.length() > 20) {
-                errores.add(errorFila(fila.numeroFila(), documento, correo, "El teléfono supera 20 caracteres"));
+            if (!telefono.isEmpty() && !UsuarioValidationPatterns.TELEFONO_PATTERN.matcher(telefono).matches()) {
+                errores.add(errorFila(fila.numeroFila(), documento, correo,
+                        "El teléfono solo debe contener entre 7 y 15 dígitos numéricos (opcional '+' inicial)"));
                 continue;
             }
             if (!password.isEmpty() && (password.length() < 6 || password.length() > 100)) {
@@ -350,7 +375,7 @@ public class CargaMasivaUsuarioServiceImpl implements CargaMasivaUsuarioService 
                     correo,
                     telefono.isEmpty() ? null : telefono,
                     grupoDestino,
-                    password.isEmpty() ? documento : password
+                    password.isEmpty() ? PasswordGeneratorUtil.generarContrasenaSegura() : password
             ));
         }
 

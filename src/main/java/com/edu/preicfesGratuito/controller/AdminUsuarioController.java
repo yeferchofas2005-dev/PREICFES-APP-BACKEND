@@ -91,11 +91,12 @@ public class AdminUsuarioController {
     public ResponseEntity<CargaMasivaUsuariosResponseDTO> cargarMasiva(
             @RequestParam("archivo") MultipartFile archivo,
             @RequestParam("idNodo") Long idNodo,
+            @RequestParam(value = "encolarEnvio", defaultValue = "false") boolean encolarEnvio,
             @AuthenticationPrincipal UserDetailsImpl userDetails
     ) {
         Long idActor = userDetails != null ? userDetails.getIdUsuario() : null;
         return ResponseEntity.ok(
-                cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(idActor, idNodo, archivo, true)
+                cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(idActor, idNodo, archivo, true, encolarEnvio)
         );
     }
 

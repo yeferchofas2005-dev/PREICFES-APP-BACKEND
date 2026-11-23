@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Environment and Secrets ###
+.env
+.env.*
+!.env.example
+*credentials*.json
+*client_secret*.json

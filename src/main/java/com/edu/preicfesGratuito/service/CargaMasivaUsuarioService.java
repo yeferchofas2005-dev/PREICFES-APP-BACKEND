@@ -16,10 +16,23 @@ public interface CargaMasivaUsuarioService {
     /**
      * Procesa un archivo .xlsx para registrar y vincular estudiantes en lote.
      */
-    CargaMasivaUsuariosResponseDTO cargarEstudiantesDesdeExcel(
+    default CargaMasivaUsuariosResponseDTO cargarEstudiantesDesdeExcel(
             Long idActor,
             Long idNodoDestino,
             MultipartFile archivo,
             boolean esAdmin
+    ) {
+        return cargarEstudiantesDesdeExcel(idActor, idNodoDestino, archivo, esAdmin, false);
+    }
+
+    /**
+     * Procesa un archivo .xlsx permitiendo encolar el envio de credenciales por correo.
+     */
+    CargaMasivaUsuariosResponseDTO cargarEstudiantesDesdeExcel(
+            Long idActor,
+            Long idNodoDestino,
+            MultipartFile archivo,
+            boolean esAdmin,
+            boolean encolarEnvio
     );
 }

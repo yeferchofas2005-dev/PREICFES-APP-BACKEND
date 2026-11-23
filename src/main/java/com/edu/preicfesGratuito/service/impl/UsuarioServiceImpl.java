@@ -11,6 +11,7 @@ import com.edu.preicfesGratuito.mapper.UsuarioMapper;
 import com.edu.preicfesGratuito.repository.NodoRepository;
 import com.edu.preicfesGratuito.repository.RolRepository;
 import com.edu.preicfesGratuito.repository.UsuarioRepository;
+import com.edu.preicfesGratuito.service.EnvioCredencialService;
 import com.edu.preicfesGratuito.service.UsuarioService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -46,6 +47,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     private final NodoRepository nodoRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioMapper usuarioMapper;
+    private final EnvioCredencialService envioCredencialService;
 
     @Override
     @Transactional(readOnly = true)
@@ -193,6 +195,11 @@ public class UsuarioServiceImpl implements UsuarioService {
             throw new BadRequestException("Ya existe un usuario con ese correo");
         }
 
+        String passwordTrim = request.getPassword().trim();
+        if (passwordTrim.length() < 6) {
+            throw new BadRequestException("La contraseña debe tener al menos 6 caracteres");
+        }
+
         Usuario nuevo = Usuario.builder()
                 .rol(rol)
                 .nodo(nodo)
@@ -200,12 +207,16 @@ public class UsuarioServiceImpl implements UsuarioService {
                 .apellidos(request.getApellidos().trim())
                 .documento(documento)
                 .correo(correo)
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .passwordHash(passwordEncoder.encode(passwordTrim))
                 .telefono(normalizarTextoOpcional(request.getTelefono()))
                 .activo(request.getActivo() != null ? request.getActivo() : true)
                 .build();
 
-        return usuarioMapper.toResponseDTO(usuarioRepository.save(nuevo));
+        Usuario guardado = usuarioRepository.save(nuevo);
+        if (Boolean.TRUE.equals(request.getEnviarCredencialesPorCorreo())) {
+            envioCredencialService.registrarEnvioManual(guardado, passwordTrim);
+        }
+        return usuarioMapper.toResponseDTO(guardado);
     }
 
     private UsuarioResponseDTO actualizarUsuarioInterno(
@@ -222,10 +233,11 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
 
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
-            if (request.getPassword().length() < 6) {
+            String passwordTrim = request.getPassword().trim();
+            if (passwordTrim.length() < 6) {
                 throw new BadRequestException("La contraseña debe tener al menos 6 caracteres");
             }
-            usuario.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+            usuario.setPasswordHash(passwordEncoder.encode(passwordTrim));
         }
 
         usuario.setRol(rol);

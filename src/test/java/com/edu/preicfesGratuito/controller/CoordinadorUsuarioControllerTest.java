@@ -129,7 +129,7 @@ class CoordinadorUsuarioControllerTest {
     @Test
     void cargarMasiva_usaIdCoordinadorAutenticadoYRetorna200() throws Exception {
         MockMultipartFile file = new MockMultipartFile("archivo", "est.xlsx", "application/octet-stream", new byte[]{1, 2});
-        when(cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(eq(2L), isNull(), any(), eq(false)))
+        when(cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(eq(2L), isNull(), any(), eq(false), eq(false)))
                 .thenReturn(CargaMasivaUsuariosResponseDTO.builder()
                         .totalFilasProcesadas(1)
                         .exitosos(1)

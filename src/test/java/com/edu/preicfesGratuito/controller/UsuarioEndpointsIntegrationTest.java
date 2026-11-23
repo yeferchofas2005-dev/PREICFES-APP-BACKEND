@@ -223,4 +223,37 @@ class UsuarioEndpointsIntegrationTest {
             }
         }
     }
+
+    @Test
+    void enviosCredenciales_adminYCoordinadorConsultanResumenYEncolanDesdeCreacion() throws Exception {
+        String adminToken = obtenerToken("admin@preicfes.com", "123456");
+        String directivoToken = obtenerToken("directivo@preicfes.com", "123456");
+        String estudianteToken = obtenerToken("estudiante@preicfes.com", "123456");
+
+        mockMvc.perform(get("/api/admin/envios-credenciales/resumen")
+                        .header("Authorization", "Bearer " + estudianteToken))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/admin/envios-credenciales/resumen")
+                        .header("Authorization", "Bearer " + directivoToken))
+                .andExpect(status().isForbidden());
+
+        // Crear usuario manual con enviarCredencialesPorCorreo=true (sin SMTP configurado queda PENDIENTE sin fallar)
+        mockMvc.perform(post("/api/directivo/usuarios")
+                        .header("Authorization", "Bearer " + directivoToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombres\":\"Mateo\",\"apellidos\":\"Correo\",\"documento\":\"77001122\",\"correo\":\"mateo.correo@preicfes.com\",\"password\":\"Clave123\",\"idRol\":4,\"enviarCredencialesPorCorreo\":true}"))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/directivo/envios-credenciales/resumen")
+                        .header("Authorization", "Bearer " + directivoToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.pendientes").isNumber())
+                .andExpect(jsonPath("$.limiteDiario").value(450));
+
+        mockMvc.perform(get("/api/admin/envios-credenciales/registros?page=0&size=5")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contenido").isArray());
+    }
 }

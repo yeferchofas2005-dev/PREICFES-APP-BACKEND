@@ -110,6 +110,35 @@ class AdminUsuarioControllerTest {
     }
 
     @Test
+    void crear_cuandoCorreoConEnie_retorna201() throws Exception {
+        UsuarioCrearDTO request = UsuarioCrearDTO.builder()
+                .nombres("Juanito")
+                .apellidos("Alimaña Perez")
+                .documento("1074165656")
+                .correo("juanito_alimaña@gmail.com")
+                .telefono("3213026854")
+                .password("123456")
+                .idRol(4L)
+                .idNodo(1L)
+                .build();
+
+        UsuarioResponseDTO respuesta = UsuarioResponseDTO.builder()
+                .idUsuario(11L)
+                .nombres("Juanito")
+                .correo("juanito_alimaña@gmail.com")
+                .activo(true)
+                .build();
+
+        when(usuarioService.crearParaAdmin(any(UsuarioCrearDTO.class))).thenReturn(respuesta);
+
+        mockMvc.perform(post("/api/admin/usuarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.idUsuario").value(11));
+    }
+
+    @Test
     void crear_cuandoCorreoDuplicado_retorna400() throws Exception {
         UsuarioCrearDTO request = UsuarioCrearDTO.builder()
                 .nombres("Laura")
@@ -128,6 +157,30 @@ class AdminUsuarioControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Ya existe un usuario con ese correo"));
+    }
+
+    @Test
+    void crear_cuandoFormatoCamposInvalido_retorna400ConErroresPorCampo() throws Exception {
+        UsuarioCrearDTO request = UsuarioCrearDTO.builder()
+                .nombres("Laura123")
+                .apellidos("Gomez")
+                .documento("palabras")
+                .correo("123456")
+                .telefono("telefono")
+                .password("")
+                .idRol(4L)
+                .idNodo(1L)
+                .build();
+
+        mockMvc.perform(post("/api/admin/usuarios")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.validationErrors.nombres").exists())
+                .andExpect(jsonPath("$.validationErrors.documento").exists())
+                .andExpect(jsonPath("$.validationErrors.correo").exists())
+                .andExpect(jsonPath("$.validationErrors.telefono").exists())
+                .andExpect(jsonPath("$.validationErrors.password").exists());
     }
 
     @Test
@@ -157,7 +210,7 @@ class AdminUsuarioControllerTest {
     @Test
     void cargarMasiva_cuandoArchivoValido_retornaResumen200() throws Exception {
         MockMultipartFile file = new MockMultipartFile("archivo", "estudiantes.xlsx", "application/octet-stream", new byte[]{1, 2});
-        when(cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(isNull(), eq(1L), any(), eq(true)))
+        when(cargaMasivaUsuarioService.cargarEstudiantesDesdeExcel(isNull(), eq(1L), any(), eq(true), eq(false)))
                 .thenReturn(CargaMasivaUsuariosResponseDTO.builder()
                         .totalFilasProcesadas(2)
                         .exitosos(1)

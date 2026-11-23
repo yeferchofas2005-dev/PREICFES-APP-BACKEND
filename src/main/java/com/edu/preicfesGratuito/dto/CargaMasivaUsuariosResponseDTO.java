@@ -16,5 +16,6 @@ public class CargaMasivaUsuariosResponseDTO {
     private int exitosos;
     private int fallidos;
     private int vinculadosAGrupo;
+    private int encoladosParaEnvio;
     private List<CargaMasivaErrorDTO> errores;
 }

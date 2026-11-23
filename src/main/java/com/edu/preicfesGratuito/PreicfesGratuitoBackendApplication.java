@@ -2,6 +2,8 @@ package com.edu.preicfesGratuito;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Punto de entrada de la aplicacion backend de PreICFES gratuito.
@@ -10,6 +12,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * detectar componentes en el paquete base y levantar el servidor web.</p>
  */
 @SpringBootApplication
+@EnableAsync
+@EnableScheduling
 public class PreicfesGratuitoBackendApplication {
 
 	/**

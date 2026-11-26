@@ -13,11 +13,13 @@ import com.edu.preicfesGratuito.repository.EnvioCredencialRepository;
 import com.edu.preicfesGratuito.repository.EnvioCredencialResumenProjection;
 import com.edu.preicfesGratuito.repository.UsuarioRepository;
 import com.edu.preicfesGratuito.service.EnvioCredencialService;
+import com.edu.preicfesGratuito.service.ParametroGeneralService;
 import com.edu.preicfesGratuito.util.AesCryptoUtil;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -73,6 +75,31 @@ public class EnvioCredencialServiceImpl implements EnvioCredencialService {
     @Value("${app.mail.delay-between-emails-ms:1000}")
     private long delayBetweenEmailsMs;
 
+    private ParametroGeneralService parametroGeneralService;
+
+    @Autowired(required = false)
+    public void setParametroGeneralService(ParametroGeneralService parametroGeneralService) {
+        this.parametroGeneralService = parametroGeneralService;
+    }
+
+    private int obtenerMaxCorreosPorDia() {
+        if (parametroGeneralService != null) {
+            return parametroGeneralService.obtenerValorEntero(
+                    ParametroGeneralServiceImpl.CLAVE_MAX_CORREOS_POR_DIA, maxCorreosPorDia
+            );
+        }
+        return maxCorreosPorDia;
+    }
+
+    private long obtenerDelayEntreEnviosMs() {
+        if (parametroGeneralService != null) {
+            return parametroGeneralService.obtenerValorEntero(
+                    ParametroGeneralServiceImpl.CLAVE_CORREO_DELAY_ENTRE_ENVIOS_MS, (int) delayBetweenEmailsMs
+            );
+        }
+        return delayBetweenEmailsMs;
+    }
+
     @Override
     @Transactional
     public void registrarEnvioManual(Usuario usuario, String passwordPlano) {
@@ -87,7 +114,7 @@ public class EnvioCredencialServiceImpl implements EnvioCredencialService {
                 .build();
 
         long enviadosHoy = contarEnviadosHoy();
-        if (enviadosHoy >= maxCorreosPorDia) {
+        if (enviadosHoy >= obtenerMaxCorreosPorDia()) {
             registro.setFechaProgramada(hoy.plusDays(1));
             envioCredencialRepository.save(registro);
             return;
@@ -169,12 +196,13 @@ public class EnvioCredencialServiceImpl implements EnvioCredencialService {
     @Transactional
     public LoteEnvioResultadoDTO reintentarFallidosParaAdmin() {
         int reencolados = envioCredencialRepository.reencolarFallidos(null, LocalDate.now());
+        int limiteDiario = obtenerMaxCorreosPorDia();
         return LoteEnvioResultadoDTO.builder()
                 .iniciado(reencolados > 0)
                 .mensaje(reencolados > 0
                         ? "Se reencolaron " + reencolados + " registros fallidos a estado PENDIENTE."
                         : "No hay registros fallidos disponibles para reintentar.")
-                .cupoRestanteHoy(Math.max(0, maxCorreosPorDia - contarEnviadosHoy()))
+                .cupoRestanteHoy(Math.max(0, limiteDiario - contarEnviadosHoy()))
                 .pendientesEnCola(construirResumen(null).getPendientes())
                 .registrosAfectados(reencolados)
                 .build();
@@ -185,12 +213,13 @@ public class EnvioCredencialServiceImpl implements EnvioCredencialService {
     public LoteEnvioResultadoDTO reintentarFallidosParaCoordinador(Long idCoordinador) {
         Long idNodo = obtenerIdNodoCoordinador(idCoordinador);
         int reencolados = envioCredencialRepository.reencolarFallidos(idNodo, LocalDate.now());
+        int limiteDiario = obtenerMaxCorreosPorDia();
         return LoteEnvioResultadoDTO.builder()
                 .iniciado(reencolados > 0)
                 .mensaje(reencolados > 0
                         ? "Se reencolaron " + reencolados + " registros fallidos de tu nodo."
                         : "No hay registros fallidos en tu nodo para reintentar.")
-                .cupoRestanteHoy(Math.max(0, maxCorreosPorDia - contarEnviadosHoy()))
+                .cupoRestanteHoy(Math.max(0, limiteDiario - contarEnviadosHoy()))
                 .pendientesEnCola(construirResumen(idNodo).getPendientes())
                 .registrosAfectados(reencolados)
                 .build();
@@ -226,7 +255,7 @@ public class EnvioCredencialServiceImpl implements EnvioCredencialService {
         if (resumen.getCupoRestanteHoy() <= 0) {
             return LoteEnvioResultadoDTO.builder()
                     .iniciado(false)
-                    .mensaje("Se alcanzó el cupo diario global (" + maxCorreosPorDia + "). Los pendientes saldrán mañana.")
+                    .mensaje("Se alcanzó el cupo diario global (" + resumen.getLimiteDiario() + "). Los pendientes saldrán mañana.")
                     .cupoRestanteHoy(0)
                     .pendientesEnCola(resumen.getPendientes())
                     .registrosAfectados(0)
@@ -264,7 +293,7 @@ public class EnvioCredencialServiceImpl implements EnvioCredencialService {
     private int procesarLoteConLockTomado(Long idNodo) {
         int enviadosExitosos = 0;
         try {
-            long cupoRestante = Math.max(0, maxCorreosPorDia - contarEnviadosHoy());
+            long cupoRestante = Math.max(0, obtenerMaxCorreosPorDia() - contarEnviadosHoy());
             if (cupoRestante == 0) {
                 return 0;
             }
@@ -273,6 +302,7 @@ public class EnvioCredencialServiceImpl implements EnvioCredencialService {
                     idNodo, PageRequest.of(0, (int) Math.min(cupoRestante, Integer.MAX_VALUE))
             );
 
+            long delayMs = obtenerDelayEntreEnviosMs();
             for (int i = 0; i < pendientes.size(); i++) {
                 EnvioCredencial registro = pendientes.get(i);
                 String passwordPlano;
@@ -290,9 +320,9 @@ public class EnvioCredencialServiceImpl implements EnvioCredencialService {
                     break;
                 }
 
-                if (delayBetweenEmailsMs > 0 && i < pendientes.size() - 1) {
+                if (delayMs > 0 && i < pendientes.size() - 1) {
                     try {
-                        Thread.sleep(delayBetweenEmailsMs);
+                        Thread.sleep(delayMs);
                     } catch (InterruptedException ie) {
                         Thread.currentThread().interrupt();
                         break;
@@ -396,10 +426,11 @@ public class EnvioCredencialServiceImpl implements EnvioCredencialService {
 
         double porcentaje = total == 0 ? 0.0 : Math.round((enviados * 1000.0) / total) / 10.0;
         long enviadosHoy = contarEnviadosHoy();
-        long cupoRestante = Math.max(0, maxCorreosPorDia - enviadosHoy);
-        int diasEstimados = (pendientes == 0 || maxCorreosPorDia <= 0)
+        int limiteDiario = obtenerMaxCorreosPorDia();
+        long cupoRestante = Math.max(0, limiteDiario - enviadosHoy);
+        int diasEstimados = (pendientes == 0 || limiteDiario <= 0)
                 ? 0
-                : (int) Math.ceil((double) Math.max(0, pendientes - cupoRestante) / maxCorreosPorDia) + (cupoRestante > 0 ? 1 : 0);
+                : (int) Math.ceil((double) Math.max(0, pendientes - cupoRestante) / limiteDiario) + (cupoRestante > 0 ? 1 : 0);
 
         return EnvioCredencialResumenDTO.builder()
                 .totalRegistros(total)
@@ -409,7 +440,7 @@ public class EnvioCredencialServiceImpl implements EnvioCredencialService {
                 .fallidos(fallidos)
                 .porcentajeAvance(porcentaje)
                 .enviadosHoyGlobal(enviadosHoy)
-                .limiteDiario(maxCorreosPorDia)
+                .limiteDiario(limiteDiario)
                 .cupoRestanteHoy(cupoRestante)
                 .loteEnProceso(loteEnProceso.get())
                 .diasEstimadosRestantes(diasEstimados)
